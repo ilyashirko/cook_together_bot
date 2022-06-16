@@ -2,3 +2,6 @@ env
 .env
 *.sqlite3
 **/__pycache__
+**/*.png
+**/*.log
+recipes/migrations
