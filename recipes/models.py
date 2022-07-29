@@ -15,16 +15,16 @@ class Recipe(models.Model):
         primary_key=True,
         editable=False
     )
-    title = models.CharField('Название блюда', max_length=100)
+    title = models.CharField('Название блюда', max_length=200)
     image = models.ImageField('Главное изображение')
     dish_types = models.ManyToManyField(
         'DishType',
         related_name='recipes',
         verbose_name='Тип(-ы) блюда'
     )
-    description = models.CharField('Краткое описание', max_length=1000)
-    full_time = models.SmallIntegerField('Общее время приготовления')
-    stove_time = models.SmallIntegerField('Время "у плиты"')
+    description = models.TextField('Краткое описание')
+    full_time = models.DurationField('Общее время приготовления')
+    stove_time = models.DurationField('Время "у плиты"')
     complexity = models.SmallIntegerField( 'Сложность')
     is_spicy = models.BooleanField('Острое')
     allergens = models.ManyToManyField(
@@ -32,10 +32,13 @@ class Recipe(models.Model):
         related_name='recipes',
         verbose_name='Аллергены',
     )
-    proteins = models.SmallIntegerField('Белки',)
-    fats = models.SmallIntegerField('Жиры',)
-    carbohydrates = models.SmallIntegerField('Углеводы',)
-    calories = models.SmallIntegerField('Калории',)
+    proteins = models.FloatField('Белки',)
+    fats = models.FloatField('Жиры',)
+    carbohydrates = models.FloatField('Углеводы',)
+    calories = models.FloatField('Калории',)
+
+    def __str__(self):
+        return self.title
 
 
 class Allergen(models.Model):
@@ -44,48 +47,73 @@ class Allergen(models.Model):
         max_length=50,
     )
 
+    def __str__(self):
+        return self.title
+
 
 class DishType(models.Model):
     title = models.CharField('Тип блюда', max_length=50)
 
+    def __str__(self):
+        return self.title
 
-class IngredientGroup(models.Model):
+
+class RecipeIngredientGroup(models.Model):
     recipe = models.ForeignKey(
         'Recipe',
         on_delete=models.CASCADE,
         verbose_name='Рецепт',
-        related_name='recipe1'
+        related_name='ingredients_groups'
     )
-    title = models.CharField('Название группы', max_length=50)
-    dish_ingredients = models.ManyToManyField(
-        'DishIngredient',
-        related_name='groups',
-        verbose_name='Ингредиенты'
+    title = models.CharField('Тип блюда', max_length=50)
+    ingredients_amount = models.ManyToManyField(
+        'RecipeIngredientAmount',
+        verbose_name='Ингредиенты',
+        related_name='RecipeIngredientAmount'
     )
 
+    def __str__(self):
+        return f'"{self.recipe}" - {self.title} ({len(self.ingredients_amount)} ингредиентов)'
 
-class DishIngredient(models.Model):
-    ingredient = models.ManyToManyField(
-        'Ingredient',
-        related_name='dish_ingredient',
-        verbose_name='Ингредиент'
-    )
-    value = models.SmallIntegerField('Количество')
+
+class IngredientGroup(models.Model):
+    title = models.CharField('Ингредиент', max_length=100)
+
+    def __str__(self):
+        return self.title
 
 
 class Ingredient(models.Model):
-    title = models.CharField('Ингредиент', max_length=50)
-    unit = models.ForeignKey(
-        'Unit',
-        on_delete=models.PROTECT,
-        related_name='ingredients',
-        verbose_name='Единица измерения'
+    title = models.CharField('Ингредиент', max_length=100)
+    group = models.ForeignKey(
+        'IngredientGroup',
+        on_delete=models.CASCADE,
+        verbose_name='Группа',
+        related_name='ingredients'
     )
 
+    def __str__(self):
+        return f'{self.title} ({self.group})'
+    
 
-class Unit(models.Model):
-    title = models.CharField('Единица измерения', max_length=50)
-    shorten = models.CharField('Сокращенно', max_length=10)
+class RecipeIngredientAmount(models.Model):
+    recipe = models.ForeignKey(
+        'Recipe',
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт',
+        related_name='ingredients_amounts'
+    )
+    ingredient = models.ForeignKey(
+        'Ingredient',
+        on_delete=models.CASCADE,
+        verbose_name='Ingredient',
+        related_name='ingredients_amounts'
+    )
+    amount = models.SmallIntegerField('Amount', null=True, blank=True)
+    measure = models.CharField('Measure', max_length=50, null=True, blank=True)
+
+    def __str__(self):
+        return f'"{self.recipe}" - {self.ingredient} ({self.amount} {self.measure})'
 
 
 class Step(models.Model):
@@ -97,6 +125,9 @@ class Step(models.Model):
     )
     image = models.ImageField('Изображение', blank=True)
     description = models.CharField('Описание', max_length=1000)
+
+    def __str__(self):
+        return self.recipe
 
 
 # User's models

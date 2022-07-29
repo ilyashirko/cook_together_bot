@@ -5,3 +5,7 @@ env
 **/*.png
 **/*.log
 recipes/migrations
+recipes_data
+media
+.vscode
+*.zip

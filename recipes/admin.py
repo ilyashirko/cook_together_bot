@@ -1,5 +1,7 @@
 from django.contrib import admin
-from .models import Allergen, DishType, Recipe, User
+
+from .models import (Allergen, DishType, Ingredient, IngredientGroup, Recipe,
+                     RecipeIngredientGroup, User, RecipeIngredientAmount, Step)
 
 
 @admin.register(Recipe)
@@ -12,6 +14,26 @@ class AllergenAdmin(admin.ModelAdmin):
 
 @admin.register(DishType)
 class DishTypeAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(RecipeIngredientGroup)
+class RecipeIngredientGroupAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(IngredientGroup)
+class IngredientGroupAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(Ingredient)
+class IngredientAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(RecipeIngredientAmount)
+class RecipeIngredientAmountAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(Step)
+class StepAdmin(admin.ModelAdmin):
     pass
 
 @admin.register(User)
