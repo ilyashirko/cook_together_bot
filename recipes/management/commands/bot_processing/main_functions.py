@@ -1,10 +1,10 @@
 import re
 import time
 
-from recipes.models import DishType, Recipe, Step
+from recipes.models import DishType, Recipe, Step, User
 
 from .keyboards import (CustomCallbackData, await_keyboard, main_keyboard,
-                        make_dish_types_buttons, make_inline_keyboard,
+                        make_dish_types_buttons, make_inline_dish_buttons, make_inline_keyboard,
                         make_keyboard)
 from .messages import GET_RECIPE_MESSAGE, MAIN_TEXTS
 
@@ -68,7 +68,24 @@ def dish_preview_message(recipe):
 
 
 def view_random_dish_preview(update, context):
-    recipe = DishType.objects.get(title=update.message.text).recipes.order_by("?").first()
+    user = User.objects.filter(telegram_id=update.effective_chat.id) \
+                       .prefetch_related(
+                            'favorite_recipes',
+                            'disliked_recipes'
+                       ).first()
+    
+    disliked = [recipe.uuid for recipe in user.disliked_recipes.all()]
+    
+    try:
+        _, dish_type = update.callback_query.data.split(':')
+        recipe = DishType.objects.get(title=dish_type) \
+                                 .recipes.exclude(uuid__in=disliked) \
+                                 .order_by("?").first()
+    except AttributeError:
+        recipe = DishType.objects.get(title=update.message.text) \
+                                 .recipes.exclude(uuid__in=disliked) \
+                                 .order_by("?").first()
+    
     if recipe:
         message = dish_preview_message(recipe)
         context.bot.send_photo(
@@ -76,12 +93,11 @@ def view_random_dish_preview(update, context):
             chat_id=update.effective_chat.id,
             caption=message,
             reply_markup=make_inline_keyboard(
-                (
-                    CustomCallbackData(
-                        button='Просмотреть рецепт полностью',
-                        key='show_full_recipe',
-                        extra=recipe.uuid
-                    ),
+                make_inline_dish_buttons(
+                    recipe,
+                    update.message.text if update.message else dish_type,
+                    [recipe.uuid for recipe in user.favorite_recipes.all()],
+                    disliked,
                 )
             )
         )
@@ -118,4 +134,112 @@ def view_full_recipe(update, context):
         chat_id=update.effective_chat.id,
         text=message,
         reply_markup=main_keyboard(update.effective_user.id)
+    )
+
+
+def add_to_favorite(update, context):
+    user_id = update.effective_user.id
+
+    user = User.objects.filter(telegram_id=update.effective_chat.id) \
+                       .prefetch_related(
+                            'favorite_recipes',
+                            'disliked_recipes'
+                       ).first()
+
+    _, recipe_uuid = update.callback_query.data.split(':')
+    recipe = Recipe.objects.get(uuid=recipe_uuid)
+    
+    if recipe not in user.favorite_recipes.all():
+        user.favorite_recipes.add(recipe)
+        user.save()
+        message = f'Рецепт "{recipe.title}" добавлен в избранное.'
+    else:
+        message = f'Рецепт "{recipe.title}" уже в избранном.'
+    
+    if recipe in user.disliked_recipes.all():
+        message += '\n\nРецепт также в списке "Стоп-лист", а значит он сохранен, но в подборке показан не будет.'
+
+    context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        reply_markup=main_keyboard(user_id)
+    )
+
+
+def add_to_disliked(update, context):
+    user_id = update.effective_user.id
+
+    user = User.objects.filter(telegram_id=update.effective_chat.id) \
+                       .prefetch_related(
+                            'favorite_recipes',
+                            'disliked_recipes'
+                       ).first()
+
+    _, recipe_uuid = update.callback_query.data.split(':')
+    recipe = Recipe.objects.get(uuid=recipe_uuid)
+    
+    if recipe not in user.disliked_recipes.all():
+        user.disliked_recipes.add(recipe)
+        user.save()
+        message = f'Рецепт "{recipe.title}" добавлен в стоп-лист.'
+    else:
+        message = f'Рецепт "{recipe.title}" уже в стоп-листе.'
+    
+    if recipe in user.favorite_recipes.all():
+        message += '\n\nРецепт также в списке "Избранное", а значит он сохранен, но в подборке показан не будет.'
+    
+    context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        reply_markup=main_keyboard(user_id)
+    )
+
+def remove_from_favorite(update, context):
+    user_id = update.effective_user.id
+
+    user = User.objects.filter(telegram_id=update.effective_chat.id) \
+                       .prefetch_related(
+                            'favorite_recipes',
+                            'disliked_recipes'
+                       ).first()
+
+    _, recipe_uuid = update.callback_query.data.split(':')
+    recipe = Recipe.objects.get(uuid=recipe_uuid)
+
+    if recipe in user.favorite_recipes.all():
+        user.favorite_recipes.remove(recipe)
+        user.save()
+        message = f'Рецепт "{recipe.title}" удален из избранного.'
+    else:
+        message = f'Рецепт "{recipe.title}" уже нет в избранном.'
+    
+    context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        reply_markup=main_keyboard(user_id)
+    )
+
+def remove_from_disliked(update, context):
+    user_id = update.effective_user.id
+
+    user = User.objects.filter(telegram_id=update.effective_chat.id) \
+                       .prefetch_related(
+                            'favorite_recipes',
+                            'disliked_recipes'
+                       ).first()
+
+    _, recipe_uuid = update.callback_query.data.split(':')
+    recipe = Recipe.objects.get(uuid=recipe_uuid)
+
+    if recipe in user.disliked_recipes.all():
+        user.disliked_recipes.remove(recipe)
+        user.save()
+        message = f'Рецепт "{recipe.title}" удален из стоп-листа.'
+    else:
+        message = f'Рецепт "{recipe.title}" уже нет в стоп-листе.'
+    
+    context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        reply_markup=main_keyboard(user_id)
     )
