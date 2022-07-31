@@ -11,6 +11,63 @@ class CustomCallbackData():
         self.extra = extra
 
 
+def make_inline_dish_buttons(recipe,
+                             another_extra,
+                             favorite,
+                             disliked):
+    buttons = [
+        [
+            CustomCallbackData(
+                button='Просмотреть рецепт полностью',
+                key='show_full_recipe',
+                extra=recipe.uuid
+            )
+        ],
+        [
+            CustomCallbackData(
+                button='Выбрать другой рецепт',
+                key='choose_another_recipe',
+                extra=another_extra
+            ),
+        ]
+    ]
+    new_row = list()
+    if recipe.uuid not in favorite:
+        new_row.append(
+            CustomCallbackData(
+                button='Добавить в избранное',
+                key='add_to_favorite',
+                extra=recipe.uuid
+            )
+        )
+    else:
+        new_row.append(
+            CustomCallbackData(
+                button='Удалить из избранного',
+                key='remove_from_favorite',
+                extra=recipe.uuid
+            )
+        )
+    if recipe.uuid not in disliked:
+        new_row.append(
+            CustomCallbackData(
+                button='Добавить в стоп-лист',
+                key='add_to_disliked',
+                extra=recipe.uuid
+            )
+        )
+    else:
+        new_row.append(
+            CustomCallbackData(
+                button='Удалить из стоп-листа',
+                key='remove_from_disliked',
+                extra=recipe.uuid
+            )
+        )
+    buttons.append(new_row)
+    return buttons
+
+
 def make_dish_types_buttons():
     buttons = list()
     all_dish_types = [
@@ -29,7 +86,7 @@ def make_dish_types_buttons():
 def main_keyboard(telegram_id: int,
                   header_buttons: list() = None,
                   footer_buttons: list() = None):
-    user, was_created = get_or_create_user(telegram_id)
+    user, _ = get_or_create_user(telegram_id)
     buttons = list()
     if header_buttons:
         buttons.append(header_buttons)
@@ -76,15 +133,15 @@ def make_inline_keyboard(buttons_info):
             ])
         elif isinstance(row, (list, tuple)):
             row_buttons = list()
+            
             for button in row:
-                row_buttons.append([
+                row_buttons.append(
                     InlineKeyboardButton(
                         text=button.button,
                         callback_data=f'{button.key}:{button.extra}'
                     )
-                ])
+                )
             buttons.append(row_buttons)
-
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
