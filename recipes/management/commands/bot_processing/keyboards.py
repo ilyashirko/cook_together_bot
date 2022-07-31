@@ -68,18 +68,16 @@ def make_inline_dish_buttons(recipe,
     return buttons
 
 
-def make_dish_types_buttons():
+def make_dish_types_buttons(dish_types):
     buttons = list()
-    all_dish_types = [
-        dish_type.title
-        for dish_type
-        in get_dish_types_objects()
-    ]
-    for i in range(0, len(all_dish_types) - 1, 2):
+    amount = len(dish_types)
+    for i in range(0, amount - 1, 2):
         try:
-            buttons.append([all_dish_types[i], all_dish_types[i + 1]])
+            buttons.append([dish_types[i], dish_types[i + 1]])
         except IndexError:
-            buttons.append([all_dish_types[i]])
+            buttons.append([dish_types[i]])
+    if amount % 2:
+        buttons.append([dish_types[amount - 1]])
     return buttons
 
 

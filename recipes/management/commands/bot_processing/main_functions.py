@@ -1,5 +1,7 @@
 import re
 import time
+from turtle import update
+from recipes.management.commands.bot_processing.db_processing import get_dish_types_objects
 
 from recipes.models import DishType, Recipe, Step, User
 
@@ -7,6 +9,18 @@ from .keyboards import (CustomCallbackData, await_keyboard, main_keyboard,
                         make_dish_types_buttons, make_inline_dish_buttons, make_inline_keyboard,
                         make_keyboard)
 from .messages import GET_RECIPE_MESSAGE, MAIN_TEXTS
+
+
+def update_dish_types():
+    global dish_types
+    dish_types = [
+        dish_type.title
+        for dish_type
+        in get_dish_types_objects()
+    ]
+
+
+dish_types = update_dish_types()
 
 
 class NoMatches(Exception):
@@ -42,7 +56,13 @@ def main_page(update, context):
 
 
 def get_recipe(update, context):
-    dish_types_buttons = make_dish_types_buttons()
+    global dish_types
+    dish_types = [
+        dish_type.title
+        for dish_type
+        in get_dish_types_objects()
+    ]
+    dish_types_buttons = make_dish_types_buttons(dish_types)
     context.bot.send_message(
         text=GET_RECIPE_MESSAGE,
         chat_id=update.effective_chat.id,
@@ -54,7 +74,7 @@ def dish_preview_message(recipe):
     full_time_str = extract_duration(recipe.full_time)
     stove_time_str = extract_duration(recipe.stove_time)
     allergens = [allergen.title for allergen in recipe.allergens.all()]
-    message = f'{recipe.title}'
+    message = str()
     if allergens:
         message += ('\n\nВНИМАНИЕ!\nВ рецепте присутствуют аллергены:')
         for allergen in allergens:
@@ -91,7 +111,13 @@ def view_random_dish_preview(update, context):
         context.bot.send_photo(
             photo=open(f'{recipe.image}', 'rb'),
             chat_id=update.effective_chat.id,
-            caption=message,
+            caption=recipe.title,
+            reply_markup=main_keyboard(update.effective_user.id)
+        )
+        time.sleep(1)
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=message,
             reply_markup=make_inline_keyboard(
                 make_inline_dish_buttons(
                     recipe,
@@ -101,13 +127,14 @@ def view_random_dish_preview(update, context):
                 )
             )
         )
-        context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text='Что хочешь сделать с этим рецептом?',
-            reply_markup=main_keyboard(update.effective_user.id)
-        )
     else:
-        dish_types_buttons = make_dish_types_buttons()
+        global dish_types
+        dish_types = [
+            dish_type.title
+            for dish_type
+            in get_dish_types_objects()
+        ]
+        dish_types_buttons = make_dish_types_buttons(dish_types)
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text='Увы, нет доступных рецептов данной категории',
@@ -242,4 +269,14 @@ def remove_from_disliked(update, context):
         chat_id=user_id,
         text=message,
         reply_markup=main_keyboard(user_id)
+    )
+
+def get_favorites(update, context):
+    recipes = User.objects.get(telegram_id=update.effective_chat.id) \
+                          .favorite_recipes.all()
+    recipes_titles = [[recipe.title] for recipe in recipes]
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Ваши любимые блюда внизу экрана. Можете выбрать любое.',
+        reply_markup=make_keyboard(main_buttons=recipes_titles)
     )
