@@ -1,7 +1,7 @@
-from typing import Union
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
+                      ReplyKeyboardMarkup)
 
-from .db_processing import get_dish_types_objects, get_or_create_user
+from .db_processing import get_or_create_user
 
 
 class CustomCallbackData():
@@ -131,7 +131,7 @@ def make_inline_keyboard(buttons_info):
             ])
         elif isinstance(row, (list, tuple)):
             row_buttons = list()
-            
+
             for button in row:
                 row_buttons.append(
                     InlineKeyboardButton(

@@ -1,13 +1,12 @@
 import re
 import time
-from turtle import update
-from recipes.management.commands.bot_processing.db_processing import get_dish_types_objects
 
+from .db_processing import get_dish_types_objects
 from recipes.models import DishType, Recipe, Step, User
 
-from .keyboards import (CustomCallbackData, await_keyboard, main_keyboard,
-                        make_dish_types_buttons, make_inline_dish_buttons, make_inline_keyboard,
-                        make_keyboard)
+from .keyboards import (await_keyboard, main_keyboard,
+                        make_dish_types_buttons, make_inline_dish_buttons,
+                        make_inline_keyboard, make_keyboard)
 from .messages import GET_RECIPE_MESSAGE, MAIN_TEXTS
 
 
@@ -20,13 +19,20 @@ def update_dish_types():
     ]
 
 
+def update_recipes_titles(recipes=Recipe.objects.all()):
+    global recipes_titles
+    recipes_titles = [recipe.title for recipe in recipes]
+
+
+recipes_titles = update_recipes_titles()
+
 dish_types = update_dish_types()
 
 
 class NoMatches(Exception):
     def __init__(self, text):
         self.text = text
-    
+
     def __str__(self):
         return self.text
 
@@ -83,25 +89,36 @@ def dish_preview_message(recipe):
     return message
 
 
-def view_random_dish_preview(update, context):
+def view_dish_preview(update, context):
+    global dish_types, recipes_titles
+    update_recipes_titles()
     user = User.objects.filter(telegram_id=update.effective_chat.id) \
                        .prefetch_related(
                             'favorite_recipes',
                             'disliked_recipes'
                        ).first()
-    
+
     disliked = [recipe.uuid for recipe in user.disliked_recipes.all()]
-    
+
     try:
         _, dish_type = update.callback_query.data.split(':')
         recipe = DishType.objects.get(title=dish_type) \
                                  .recipes.exclude(uuid__in=disliked) \
                                  .order_by("?").first()
     except AttributeError:
-        recipe = DishType.objects.get(title=update.message.text) \
-                                 .recipes.exclude(uuid__in=disliked) \
-                                 .order_by("?").first()
-    
+        if update.message.text in dish_types:
+            try:
+                recipe = DishType.objects.get(title=update.message.text) \
+                                         .recipes.exclude(uuid__in=disliked) \
+                                         .order_by("?").first()
+            except DishType.MultipleObjectsReturned:
+                pass
+        elif update.message.text in recipes_titles:
+            try:
+                recipe = Recipe.objects.get(title=update.message.text)
+            except Recipe.MultipleObjectsReturned:
+                pass
+
     if recipe:
         message = dish_preview_message(recipe)
         context.bot.send_photo(
@@ -132,6 +149,7 @@ def view_random_dish_preview(update, context):
             text='Увы, нет доступных рецептов данной категории',
             reply_markup=make_keyboard(main_buttons=dish_types_buttons)
         )
+
 
 def view_full_recipe(update, context):
     recipe_uuid = update.callback_query.data.split(':')[1]
@@ -167,16 +185,17 @@ def add_to_favorite(update, context):
 
     _, recipe_uuid = update.callback_query.data.split(':')
     recipe = Recipe.objects.get(uuid=recipe_uuid)
-    
+
     if recipe not in user.favorite_recipes.all():
         user.favorite_recipes.add(recipe)
         user.save()
         message = f'Рецепт "{recipe.title}" добавлен в избранное.'
     else:
         message = f'Рецепт "{recipe.title}" уже в избранном.'
-    
+
     if recipe in user.disliked_recipes.all():
-        message += '\n\nРецепт также в списке "Стоп-лист", а значит он сохранен, но в подборке показан не будет.'
+        message += '\n\nРецепт также в списке "Стоп-лист", а значит ' \
+                   'он сохранен, но в подборке показан не будет.'
 
     context.bot.send_message(
         chat_id=user_id,
@@ -233,12 +252,13 @@ def remove_from_favorite(update, context):
         message = f'Рецепт "{recipe.title}" удален из избранного.'
     else:
         message = f'Рецепт "{recipe.title}" уже нет в избранном.'
-    
+
     context.bot.send_message(
         chat_id=user_id,
         text=message,
         reply_markup=main_keyboard(user_id)
     )
+
 
 def remove_from_disliked(update, context):
     user_id = update.effective_user.id
@@ -258,12 +278,13 @@ def remove_from_disliked(update, context):
         message = f'Рецепт "{recipe.title}" удален из стоп-листа.'
     else:
         message = f'Рецепт "{recipe.title}" уже нет в стоп-листе.'
-    
+
     context.bot.send_message(
         chat_id=user_id,
         text=message,
         reply_markup=main_keyboard(user_id)
     )
+
 
 def get_favorites(update, context):
     recipes = User.objects.get(telegram_id=update.effective_chat.id) \

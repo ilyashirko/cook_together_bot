@@ -9,7 +9,9 @@ def make_logger(env: Env.read_env):
     log.setLevel(logging.INFO)
 
     filehandler = logging.FileHandler(log_name)
-    basic_formater = logging.Formatter('%(asctime)s : [%(levelname)s] : %(message)s')
+    basic_formater = logging.Formatter(
+        '%(asctime)s : [%(levelname)s] : %(message)s'
+    )
     filehandler.setFormatter(basic_formater)
     log.addHandler(filehandler)
     return log

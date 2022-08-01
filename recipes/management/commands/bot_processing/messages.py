@@ -1,7 +1,5 @@
 from textwrap import dedent
 
-
-
 HELLO_MESSAGE = dedent(
     """
     Привет!
