@@ -1,12 +1,17 @@
 from django.core.management.base import BaseCommand
 from environs import Env
-from .bot_processing.db_processing import get_dish_types_objects
 from telegram.ext import (CallbackQueryHandler, CommandHandler, Filters,
                           MessageHandler, Updater)
 
+from .bot_processing.db_processing import get_dish_types_objects
 from .bot_processing.logger import make_logger
-from .bot_processing.main_functions import (add_to_disliked, add_to_favorite, get_recipe, main_page, remove_from_disliked, remove_from_favorite,
-                                            view_random_dish_preview, view_full_recipe, get_favorites, dish_types, recipes)
+from .bot_processing.main_functions import (add_to_disliked, add_to_favorite,
+                                            dish_types, get_favorites,
+                                            get_recipe, main_page, recipes,
+                                            remove_from_disliked,
+                                            remove_from_favorite,
+                                            view_full_recipe,
+                                            view_random_dish_preview)
 
 
 class Command(BaseCommand):
@@ -24,7 +29,6 @@ class Command(BaseCommand):
         )
         dispatcher = updater.dispatcher
 
-        
         dispatcher.add_handler(CommandHandler('start', main_page))
         dispatcher.add_handler(MessageHandler(Filters.text('Вернуться на главную'), main_page))
 

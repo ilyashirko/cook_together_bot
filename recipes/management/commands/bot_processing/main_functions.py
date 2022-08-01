@@ -57,11 +57,7 @@ def main_page(update, context):
 
 def get_recipe(update, context):
     global dish_types
-    dish_types = [
-        dish_type.title
-        for dish_type
-        in get_dish_types_objects()
-    ]
+    update_dish_types()
     dish_types_buttons = make_dish_types_buttons(dish_types)
     context.bot.send_message(
         text=GET_RECIPE_MESSAGE,
@@ -129,11 +125,7 @@ def view_random_dish_preview(update, context):
         )
     else:
         global dish_types
-        dish_types = [
-            dish_type.title
-            for dish_type
-            in get_dish_types_objects()
-        ]
+        update_dish_types()
         dish_types_buttons = make_dish_types_buttons(dish_types)
         context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -204,22 +196,24 @@ def add_to_disliked(update, context):
 
     _, recipe_uuid = update.callback_query.data.split(':')
     recipe = Recipe.objects.get(uuid=recipe_uuid)
-    
+
     if recipe not in user.disliked_recipes.all():
         user.disliked_recipes.add(recipe)
         user.save()
         message = f'Рецепт "{recipe.title}" добавлен в стоп-лист.'
     else:
         message = f'Рецепт "{recipe.title}" уже в стоп-листе.'
-    
+
     if recipe in user.favorite_recipes.all():
-        message += '\n\nРецепт также в списке "Избранное", а значит он сохранен, но в подборке показан не будет.'
-    
+        message += '\n\nРецепт также в списке "Избранное", ' \
+                   'а значит он сохранен, но в подборке показан не будет.'
+
     context.bot.send_message(
         chat_id=user_id,
         text=message,
         reply_markup=main_keyboard(user_id)
     )
+
 
 def remove_from_favorite(update, context):
     user_id = update.effective_user.id
