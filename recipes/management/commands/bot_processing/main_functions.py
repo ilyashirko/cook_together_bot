@@ -4,6 +4,7 @@ import time
 from .db_processing import get_dish_types_objects
 from recipes.models import DishType, Recipe, Step, User
 
+from .exceptions import NoMatches
 from .keyboards import (await_keyboard, main_keyboard,
                         make_dish_types_buttons, make_inline_dish_buttons,
                         make_inline_keyboard, make_keyboard)
@@ -27,14 +28,6 @@ def update_recipes_titles(recipes=Recipe.objects.all()):
 recipes_titles = update_recipes_titles()
 
 dish_types = update_dish_types()
-
-
-class NoMatches(Exception):
-    def __init__(self, text):
-        self.text = text
-
-    def __str__(self):
-        return self.text
 
 
 def extract_duration(duration):
