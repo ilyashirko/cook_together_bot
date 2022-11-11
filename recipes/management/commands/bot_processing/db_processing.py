@@ -1,4 +1,21 @@
-from recipes.models import DishType, User
+from recipes.models import DishType, User, Recipe
+
+
+def update_dish_types(dish_types_objs=DishType.objects.all()):
+    global dish_types
+    dish_types = [dish_type.title for dish_type in dish_types_objs]
+    return dish_types
+
+
+def update_recipes_titles(recipes=Recipe.objects.all()):
+    global recipes_titles
+    recipes_titles = [recipe.title for recipe in recipes]
+    return recipes_titles
+
+
+recipes_titles = update_recipes_titles()
+
+dish_types = update_dish_types()
 
 
 def check_is_admin(telegram_id: str):

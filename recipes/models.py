@@ -164,3 +164,35 @@ class User(models.Model):
         blank=True
     )
     is_admin = models.BooleanField('Администратор', default=False)
+
+
+
+class Donate(models.Model):
+    payment_id = models.CharField(
+        "id",
+        unique=True,
+        default=uuid.uuid1,
+        max_length=36,
+        validators=[MinLengthValidator(36)],
+        primary_key=True,
+        editable=False
+    )
+    event = "Событие"
+    user = models.CharField('name', max_length=100)
+    summ = models.IntegerField('Amount', default=None, null=True)
+    confirmed = models.BooleanField('Payment confirmed', default=False)
+
+    def create_invoice(self, provider_token, amount):
+        return {
+            'chat_id': self.user.telegram_id,
+            'title': 'Help the organizers',
+            'descripton': self.event,
+            'payload': self.payment_id,
+            'provider_token': provider_token,
+            'currency': 'RUB',
+            'start_parameter': 'test',
+            'prices': [{
+                'label': 'Руб',
+                'amount': amount
+            }]
+        }
